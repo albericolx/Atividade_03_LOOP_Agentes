@@ -55,6 +55,39 @@ Ariel & Sintetiza o passo e os pontos sens\'iveis & \texttt{gemini-3.8-flash} & 
 \end{tabular}
 \end{table}
 
+\subsection{Arquitetura do Sistema}
+A infraestrutura h\'ibrida foi projetada para orquestrar as diferentes naturezas dos agentes. A Figura~\ref{fig:arquitetura} ilustra o diagrama arquitetural do sistema.
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[
+  node distance=1.5cm and 2cm,
+  every node/.style={font=\small},
+  sysbox/.style={draw, fill=blue!5, rounded corners, minimum width=3cm, minimum height=1.2cm, align=center, thick},
+  extbox/.style={draw, fill=green!5, rounded corners, minimum width=3cm, minimum height=1.2cm, align=center, thick, dashed},
+  filebox/.style={draw, fill=yellow!10, rounded corners=0, minimum width=2.5cm, minimum height=0.8cm, align=center},
+  arr/.style={-{Stealth}, thick}
+]
+
+  % Orchestrator
+  \node[sysbox] (orch) {\textbf{Orquestrador Python}\\(\texttt{multi\_agent\_sim.py})\\Gest\~ao de Estado};
+  
+  % External APIs and Local Servers
+  \node[extbox, above left=1cm and -0.5cm of orch] (gemini) {\textbf{Gemini API}\\Nuvem (Nanda e Ariel)};
+  \node[extbox, above right=1cm and -0.5cm of orch] (ollama) {\textbf{Ollama}\\Local (Claudio)};
+  
+  % Data / Storage
+  \node[filebox, below=1.0cm of orch] (files) {\textbf{Sistema de Arquivos}\\Logs e Relat\'orios};
+
+  % Connections
+  \draw[arr, <->] (orch) |- node[pos=0.75, left, font=\scriptsize] {REST} (gemini);
+  \draw[arr, <->] (orch) |- node[pos=0.75, right, font=\scriptsize] {HTTP Local} (ollama);
+  \draw[arr, <->] (orch) -- node[right, font=\scriptsize] {E/S} (files);
+
+\end{tikzpicture}
+\caption{Arquitetura de sistema ilustrando a orquestra\c{c}\~ao h\'ibrida entre ambiente \emph{cloud} e local acoplada ao sistema de persist\^encia em disco.}\label{fig:arquitetura}
+\end{figure}
+
 \subsection{Protocolo de uma rodada}
 \begin{figure}[t]
 \centering
