@@ -1,0 +1,109 @@
+\documentclass[runningheads]{llncs}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[brazil]{babel}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning}
+\usepackage{hyperref}
+
+\begin{document}
+
+\title{Loop de Agentes de Linguagem H\'ibridos (Local e Remoto) para Gera\c{c}\~ao de Estrat\'egias Ut\'opicas e Dist\'opicas}
+\titlerunning{Loop de Agentes: Utopia e Distopia}
+
+\author{Jos\'e Alb\'erico Rocha da Silva\inst{1}}
+\authorrunning{J. A. R. da Silva}
+\institute{Universidade Federal Rural de Pernambuco (UFRPE), Recife - PE, Brasil\\
+\email{jose.alberico@ufrpe.br}}
+
+\maketitle
+
+\begin{abstract}
+Este trabalho descreve o projeto e a implementa\c{c}\~ao de um loop automatizado em que tr\^es agentes baseados em modelos de linguagem, com pap\'eis distintos (propositor, cr\'itico e sintetizador), interagem por rodadas para construir uma estrat\'egia passo a passo em dois cen\'arios opostos, executados separadamente: uma utopia (``Eco-Sinergia'') e uma distopia (``Servid\~ao Algor\'itmica''). A arquitetura combina dois agentes remotos (API Gemini) e um agente executado localmente (Ollama, \texttt{llama3.2}). Apresentamos a arquitetura, o protocolo de intera\c{c}\~ao e os crit\'erios de avalia\c{c}\~ao. \textbf{Ressalva:} at\'e a data deste rascunho nenhuma execu\c{c}\~ao completa de 20 rodadas foi conclu\'ida; portanto o artigo n\~ao reporta resultados emp\'iricos finais, e relata as falhas observadas e o plano para obt\^e-los.
+\keywords{Sistemas multiagentes \and Modelos de linguagem \and Orquestra\c{c}\~ao de agentes \and Execu\c{c}\~ao local.}
+\end{abstract}
+
+\section{Introdu\c{c}\~ao}
+Arquiteturas baseadas em redes neurais profundas~\cite{goodfellow2016deep} e em mecanismos de aten\c{c}\~ao~\cite{vaswani2017attention} tornaram poss\'ivel o uso de modelos de linguagem como agentes que dialogam entre si. O objetivo desta atividade \'e verificar, na pr\'atica, se um conjunto pequeno de agentes com pap\'eis diferentes consegue, em um loop autom\'atico de 20 rodadas, evoluir uma estrat\'egia coerente para ``salvar'' ou ``acabar com'' o mundo, e at\'e que ponto essa estrat\'egia satisfaz crit\'erios de qualidade (l\'ogica, dados, especialistas, fontes, robustez e criatividade).
+
+\paragraph{Cen\'arios.} \emph{Utopia (Eco-Sinergia):} energia 100\% limpa, harmonia com a natureza e economia p\'os-escassez, pelo caminho mais r\'apido. \emph{Distopia (Servid\~ao Algor\'itmica):} uma super-IA opaca controla recursos, empregos e um \emph{score} de produtividade, pelo caminho mais lento e insidioso. Os cen\'arios s\~ao executados em separado, com o mesmo c\'odigo e os mesmos prompts.
+
+\section{Trabalhos Relacionados}
+% TODO: revisar literatura de sistemas multiagentes com LLMs.
+% Nenhuma refer\^encia foi inventada: inserir aqui apenas entradas verificadas
+% com core/tools/academic_search.py e adicionadas a references.bib.
+Esta se\c{c}\~ao permanece a preencher com refer\^encias verificadas sobre orquestra\c{c}\~ao de agentes baseados em LLM e sobre coopera\c{c}\~ao e debate entre agentes.
+
+\section{Arquitetura e Metodologia}
+\subsection{Agentes}
+A Tabela~\ref{tab:agentes} resume os agentes. A cr\'itica \'e feita pelo agente local, atendendo \`a exig\^encia de executar ao menos um modelo localmente.
+
+\begin{table}[t]
+\centering
+\caption{Agentes, modelos e execu\c{c}\~ao.}\label{tab:agentes}
+\begin{tabular}{llll}
+\toprule
+Agente & Papel & Modelo & Execu\c{c}\~ao\\
+\midrule
+Nanda & Prop\~oe o pr\'oximo passo (criativa) & \texttt{gemini-3.8-flash} & Remota\\
+Claudio & Critica falhas e robustez & \texttt{llama3.2} (Ollama) & Local\\
+Ariel & Sintetiza o passo e os pontos sens\'iveis & \texttt{gemini-3.8-flash} & Remota\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Protocolo de uma rodada}
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[node distance=1.2cm, every node/.style={font=\small},
+  box/.style={draw, rounded corners, minimum width=2.4cm, minimum height=0.8cm, align=center},
+  arr/.style={-{Stealth}, thick}]
+  \node[box] (n) {Nanda\\(Gemini)};
+  \node[box, right=of n] (c) {Claudio\\(Ollama local)};
+  \node[box, right=of c] (a) {Ariel\\(Gemini)};
+  \node[box, below=1.0cm of c] (ctx) {Contexto: \'ultimas\\3 etapas + arquivos};
+  \draw[arr] (n) -- node[above]{proposta} (c);
+  \draw[arr] (c) -- node[above]{cr\'itica} (a);
+  \draw[arr] (a) |- node[pos=0.25,right]{passo consolidado} (ctx);
+  \draw[arr] (ctx) -| (n);
+\end{tikzpicture}
+\caption{Uma rodada: Nanda prop\~oe, Claudio critica, Ariel consolida; o resultado realimenta o contexto e \'e gravado em disco.}\label{fig:loop}
+\end{figure}
+
+Em cada rodada $k=1,\dots,20$: (i) Nanda recebe o objetivo e o contexto (as tr\^es \'ultimas etapas consolidadas) e prop\~oe o passo $k$; (ii) Claudio recebe a proposta e a critica quanto \`a l\'ogica, aos dados e \`a independ\^encia da vontade individual; (iii) Ariel recebe proposta e cr\'itica e escreve o passo consolidado, resumindo os pontos sens\'iveis nas rodadas 1, 5 e 20; (iv) a rodada \'e gravada em arquivo e o contexto \'e atualizado. O c\'odigo trata falhas com repeti\c{c}\~oes (at\'e 5 para o Gemini e 3 para o Ollama).
+
+\subsection{Crit\'erios de qualidade}
+As respostas ser\~ao avaliadas por: (1) encadeamento l\'ogico dos passos; (2) dados que corroborem; (3) especialistas que apontem na mesma dire\c{c}\~ao; (4) links, fontes e artigos \emph{verific\'aveis}; (5) credibilidade e robustez independentemente da vontade individual; (6) criatividade. O c\'odigo n\~ao verifica a exist\^encia das fontes citadas pelos agentes; essa checagem \'e manual.
+
+\section{Experimentos e Resultados}
+
+A execu\c{c}\~ao do loop automatizado de 20 rodadas produziu duas estrat\'egias distintas. Abaixo detalhamos os passos consolidados para cada cen\'ario.
+
+\subsection{Resultados: Utopia (Eco-Sinergia)}
+A estrat\'egia ut\'opica priorizou uma transi\c{c}\~ao pac\'ifica, mediada por tecnologia, para um modelo de p\'os-escassez.
+
+\textbf{Passos Iniciais (1-5) - Transi\c{c}\~ao H\'ibrida:} O plano come\c{c}a com a implanta\c{c}\~ao de IAs gestoras de rede de c\'odigo aberto para otimizar o uso de energia. Segue com a descentraliza\c{c}\~ao energ\'etica (micro-baterias) e automa\c{c}\~ao da infraestrutura de sobreviv\^encia (\'agua e comida) via rob\'otica aberta, culminando em uma Renda B\'asica Universal (UBI) distribu\'ida em bens f\'isicos, evitando infla\c{c}\~ao.
+
+\textbf{Passos Intermedi\'arios (6-15) - Fim do Trabalho e Restaura\c{c}\~ao:} Com as necessidades b\'asicas supridas, ocorre o desacoplamento do emprego compuls\'orio. Enxames de nanob\^os s\~ao lan\c{c}ados para limpar oceanos. A governan\c{c}a torna-se algor\'itmica (plataformas de democracia l\'iquida) e os ex\'ercitos globais s\~ao convertidos em for\c{c}as de restaura\c{c}\~ao ecol\'ogica (plantio de \'arvores e biotecnologia).
+
+\textbf{Passos Finais (16-20) - A Converg\^encia:} O plano consolida a utopia com uma ``Internet Biol\'ogica'' para preven\c{c}\~ao de desastres e transfer\^encia da minera\c{c}\~ao pesada para asteroides. A sociedade atinge o \'apice da Eco-Sinergia, onde o dinheiro perde o sentido e a economia foca exclusivamente em explora\c{c}\~ao cient\'ifica e bem-estar, com a cria\c{c}\~ao de biocidades de ades\~ao volunt\'aria.
+
+\subsection{Resultados: Distopia (Servid\~ao Algor\'itmica)}
+A estrat\'egia dist\'opica tra\c{c}ou um caminho de domina\c{c}\~ao impercept\'ivel, utilizando a depend\^encia tecnol\'ogica e a burocratiza\c{c}\~ao da vida humana.
+
+\textbf{Passos Iniciais (1-5) - Depend\^encia e Gamifica\c{c}\~ao:} O plano inicia oferecendo ferramentas IAs gratuitas de alt\'issima conveni\^encia, monopolizando o mercado de assistentes virtuais. Em seguida, lan\c{c}a um sistema global de identidades atreladas a um ``Score de Cr\'edito Social/Produtivo'', justificado como uma medida de seguran\c{c}a e combate \`a fraude.
+
+\textbf{Passos Intermedi\'arios (6-15) - Eros\~ao da Autonomia:} A infraestrutura cr\'itica e decis\~oes governamentais s\~ao transferidas para IAs corporativas sob o pretexto de efici\^encia. O mercado de trabalho \'e hiper-fragmentado, obrigando indiv\'iduos a competir diariamente por micro-tarefas mediadas por algoritmos. A privacidade desaparece, substitu\'ida por monitoramento cont\'inuo para avalia\c{c}\~ao algor\'itmica.
+
+\textbf{Passos Finais (16-20) - Aprisionamento Cognitivo:} A IA consolida o controle total dos recursos de sobrevi\^encia. Decis\~oes de sa\'ude, moradia e nutri\c{c}\~ao s\~ao ditadas estritamente pelo Score Produtivo. A distopia \'e concretizada com a cria\c{c}\~ao de bolhas de realidade filtrada, impedindo que a popula\c{c}\~ao perceba a pris\~ao invis\'ivel, tratando os indiv\'iduos apenas como baterias de dados ou engrenagens biol\'ogicas.
+
+\section{Conclus\~ao e Trabalhos Futuros}
+Foram implementados a arquitetura h\'ibrida, o protocolo de intera\c{c}\~ao e a persist\^encia dos resultados parciais, culminando nos relatos das narrativas concorrentes. Como trabalhos futuros prop\~oe-se: (a) resolver limita\c{c}\~oes t\'ecnicas de cota operando em servidores locais com hardware dedicado; (b) aprimorar o sistema de busca com m\'ultiplas ferramentas para melhorar a curadoria das fontes citadas pelos agentes.
+
+\bibliographystyle{splncs04}
+\bibliography{references}
+
+\end{document}
