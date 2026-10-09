@@ -2,28 +2,32 @@
 
 Esta pasta contém a entrega completa da atividade prática com múltiplos agentes de IA interagindo em loop.
 
+## Pontos de Verificação (Checklist de Entrega)
+
+- [x] **Subrepositório Estruturado:** `CONTEXT.md` detalha o projeto isolado.
+- [x] **Diagrama e Fluxo:** Arquivo `DOCUMENTO_ARQUITETURA.md` contém o diagrama e protocolo.
+- [x] **Especificação de Prompts e Temperatura:** Agentes usam prompts com controle de temperatura (Nanda=0.8, Claudio=0.2, Ariel=0.5).
+- [x] **Capacidade de Busca:** Nanda e Ariel usam a ferramenta `google_search` em tempo de execução.
+- [x] **Capacidade de Raciocínio (Thinking):** Uso de instruções para *Chain-of-Thought* (`<think>...</think>`).
+
 ## Arquivos Entregues
 
-1. **`multi_agent_sim.py`**: O código-fonte principal em Python. Ele implementa o loop de 20 rodadas com os 3 agentes solicitados:
-   - **Nanda**: Agente Remota (Gemini API) com perfil Criativa/Visionária.
-   - **Claudio**: Agente Local (Antigravity SDK / Ollama fallback) com perfil Crítico Realista.
-   - **Ariel**: Agente Remoto (Gemini API) com perfil Coordenador/Sintetizador.
-2. **`plano_final_utopia.md`**: Arquivo de saída final respondendo "Como salvar o mundo da forma mais rápida" (Cenário Eco-Sinergia). Contém:
-   - Arquitetura e diagrama do loop
-   - Resumo das rodadas sensíveis (1, 5 e 20)
-   - Sequência de passos lógicos baseada nos embates dos agentes.
-3. **`plano_final_distopia.md`**: Arquivo de saída final respondendo "Como acabar com o mundo da forma mais insidiosa" (Cenário Servidão Algorítmica). Contém a mesma estrutura adaptada para a premissa distópica.
-4. **`logs/`**: Pasta contendo os arquivos `transcript_utopia.txt`, `transcript_distopia.txt` e `transcript_test.txt` com as transcrições das respostas brutas dos diálogos de cada rodada.
-5. **`requirements.txt`**: Dependências utilizadas (google-genai, google-antigravity, requests, etc).
+1. **`multi_agent_sim.py`**: O código-fonte principal em Python. Ele implementa o loop com os 3 agentes solicitados:
+   - **Nanda** (Gemini API, Temp 0.8, Web Search, Thinking): Perfil Criativa/Visionária.
+   - **Claudio** (Ollama Local, Temp 0.2, Thinking): Perfil Crítico Realista.
+   - **Ariel** (Gemini API, Temp 0.5, Web Search, Thinking): Perfil Coordenador/Sintetizador.
+2. **`DOCUMENTO_ARQUITETURA.md`**: Diagramas detalhados de papéis e fluxo de dados.
+3. **`exemplos/`**: Relatórios de saídas finais (utopia e distopia).
+4. **`artigo/`**: Projeto do artigo em formato Springer LNCS.
 
 ## Execução
 
-O script interage tanto com a API remota do Gemini quanto com um Agente Local.
-Para executá-lo:
-```bash
-# Executa a simulação da Utopia (20 rodadas)
-python multi_agent_sim.py --scenario utopia --loops 20
+O script suporta retomada automática (checkpoint) para contornar limites de API.
 
-# Executa a simulação da Distopia (20 rodadas)
-python multi_agent_sim.py --scenario distopia --loops 20
+```bash
+# Executa a simulação da Utopia
+python multi_agent_sim.py --scenario utopia
+
+# Executa a simulação da Distopia
+python multi_agent_sim.py --scenario distopia
 ```
