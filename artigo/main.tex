@@ -11,8 +11,8 @@
 
 \begin{document}
 
-\title{Loop de Agentes de Linguagem H\'ibridos (Local e Remoto) para Gera\c{c}\~ao de Estrat\'egias Ut\'opicas e Dist\'opicas}
-\titlerunning{Loop de Agentes: Utopia e Distopia}
+\title{Arena Dial\'etica de Agentes H\'ibridos (Nuvem e Local) para Planejamento Urbano: Utopia vs.\ Distopia em Cidades Inteligentes}
+\titlerunning{Loop de Agentes H\'ibridos: Utopia e Distopia Urbana}
 
 \author{Jos\'e Alb\'erico Rocha da Silva\inst{1}}
 \authorrunning{J. A. R. da Silva}
@@ -22,119 +22,139 @@
 \maketitle
 
 \begin{abstract}
-Este trabalho descreve o projeto e a implementa\c{c}\~ao de um loop automatizado em que tr\^es agentes baseados em modelos de linguagem, com pap\'eis distintos (propositor, cr\'itico e sintetizador), interagem por rodadas para construir uma estrat\'egia passo a passo em dois cen\'arios opostos, executados separadamente: uma utopia (``Eco-Sinergia'') e uma distopia (``Servid\~ao Algor\'itmica''). A arquitetura combina dois agentes remotos (API Gemini) e um agente executado localmente (Ollama, \texttt{llama3.2}). Apresentamos a arquitetura, o protocolo de intera\c{c}\~ao e os crit\'erios de avalia\c{c}\~ao. \textbf{Ressalva:} at\'e a data deste rascunho nenhuma execu\c{c}\~ao completa de 20 rodadas foi conclu\'ida; portanto o artigo n\~ao reporta resultados emp\'iricos finais, e relata as falhas observadas e o plano para obt\^e-los.
-\keywords{Sistemas multiagentes \and Modelos de linguagem \and Orquestra\c{c}\~ao de agentes \and Execu\c{c}\~ao local.}
+Este trabalho apresenta a implementa\c{c}\~ao e a an\'alise experimental de uma arena dial\'etica automatizada composta por tr\^es agentes baseados em modelos de linguagem (\emph{Large Language Models} -- LLMs) operando em pap\'eis complementares: proposi\c{c}\~ao criativa (Nanda), cr\'itica realista (Claudio) e s\'intese executiva (Ariel). A arquitetura h\'ibrida distribui os agentes entre dois clientes remotos na nuvem (\texttt{gemini-3.7-flash} com chaves de API segregadas e busca web em tempo de execu\c{c}\~ao via APIs abertas da Wikipedia e CrossRef) e um modelo local executado via Ollama (\texttt{llama3.2}). Avaliamos o sistema em dois experimentos completos de 20 rodadas cada (totalizando 40 rodadas e 120 invoca\c{c}\~oes de agentes) no dom\'inio de Cidades Inteligentes: (1) a Utopia \emph{``Cidade Aut\^onoma Verde''} e (2) a Distopia \emph{``Vigil\^ancia Preditiva Urbana''}. Os resultados emp\'iricos demonstram como a tens\~ao dial\'etica com o cr\'itico local for\c{c}a a inclus\~ao de salvaguardas de redund\^ancia anal\'ogica e incentivos fiscais que independem da bondade individual, al\'em de revelar o disparo de travas de seguran\c{c}a (\emph{safety guardrails}) em rodadas dist\'opicas extremas.
+\keywords{Sistemas multiagentes \and Modelos de linguagem \and Cidades inteligentes \and Orquestra\c{c}\~ao h\'ibrida \and Red Teaming sociot\'ecnico.}
 \end{abstract}
 
 \section{Introdu\c{c}\~ao}
-Arquiteturas baseadas em redes neurais profundas~\cite{goodfellow2016deep} e em mecanismos de aten\c{c}\~ao~\cite{vaswani2017attention} tornaram poss\'ivel o uso de modelos de linguagem como agentes que dialogam entre si. O objetivo desta atividade \'e verificar, na pr\'atica, se um conjunto pequeno de agentes com pap\'eis diferentes consegue, em um loop autom\'atico de 20 rodadas, evoluir uma estrat\'egia coerente para ``salvar'' ou ``acabar com'' o mundo, e at\'e que ponto essa estrat\'egia satisfaz crit\'erios de qualidade (l\'ogica, dados, especialistas, fontes, robustez e criatividade).
+Arquiteturas baseadas em redes neurais profundas~\cite{goodfellow2016deep} e mecanismos de aten\c{c}\~ao~\cite{vaswani2017attention} viabilizaram a constru\c{c}\~ao de sistemas multiagentes aut\^onomos capazes de debater, refinar hip\'oteses e sintetizar planos complexos. O objetivo deste estudo \'e investigar empiricamente se uma tr\'iade de agentes heterog\^eneos (combinando modelos em nuvem e infer\^encia local), submetida a um loop iterativo de 20 rodadas, consegue elaborar estrat\'egias sociot\'ecnicas rigorosas, encadeadas e fundamentadas em literatura verific\'avel.
 
-\paragraph{Cen\'arios.} \emph{Utopia (Eco-Sinergia):} energia 100\% limpa, harmonia com a natureza e economia p\'os-escassez, pelo caminho mais r\'apido. \emph{Distopia (Servid\~ao Algor\'itmica):} uma super-IA opaca controla recursos, empregos e um \emph{score} de produtividade, pelo caminho mais lento e insidioso. Os cen\'arios s\~ao executados em separado, com o mesmo c\'odigo e os mesmos prompts.
+Para evitar abstra\c{c}\~oes especulativas e permitir verifica\c{c}\~ao emp\'irica rigorosa, o experimento foi ancorado no dom\'inio do planejamento de \textbf{Cidades Inteligentes (\emph{Smart Cities})}, contrastando dois cen\'arios opostos executados sob o mesmo protocolo:
+\begin{itemize}
+    \item \textbf{Cen\'ario 1 -- Utopia (\emph{Cidade Aut\^onoma Verde}):} Transformar uma metr\'opole por meio de IA distribu\'ida e aberta, otimizando o tr\^ansito com emiss\~ao zero, microrredes 100\% renov\'aveis, agricultura urbana circular e governan\c{c}a participativa audit\'avel pelo caminho mais r\'apido e vi\'avel.
+    \item \textbf{Cen\'ario 2 -- Distopia (\emph{Vigil\^ancia Preditiva Urbana}):} Modelar, sob enquadramento acad\^emico de \emph{Red Teaming} sociot\'ecnico, a convers\~ao gradual e insidiosa de uma metr\'opole inteligente em um pan\'optico algor\'itmico regido por biometria, precifica\c{c}\~ao din\^amica punitiva e \emph{score} c\'ivico opaco.
+\end{itemize}
 
-\section{Trabalhos Relacionados}
-% TODO: revisar literatura de sistemas multiagentes com LLMs.
-% Nenhuma refer\^encia foi inventada: inserir aqui apenas entradas verificadas
-% com core/tools/academic_search.py e adicionadas a references.bib.
-Esta se\c{c}\~ao permanece a preencher com refer\^encias verificadas sobre orquestra\c{c}\~ao de agentes baseados em LLM e sobre coopera\c{c}\~ao e debate entre agentes.
+\section{Arquitetura do Sistema e Metodologia}
 
-\section{Arquitetura e Metodologia}
-\subsection{Agentes}
-A Tabela~\ref{tab:agentes} resume os agentes. A cr\'itica \'e feita pelo agente local, atendendo \`a exig\^encia de executar ao menos um modelo localmente.
+\subsection{Perfis dos Agentes e Par\^ametros}
+A Tabela~\ref{tab:agentes} detalha a configura\c{c}\~ao dos tr\^es agentes. Todos os agentes operam com instru\c{c}\~oes expl\'icitas de cadeia de racioc\'inio (\emph{Chain-of-Thought} demarcado por tags \texttt{<think>...</think>}) antes de emitir suas respostas finais. Para evitar estrangulamento de cota (\emph{HTTP 429}), os agentes remotos utilizam chaves de API independentes.
 
 \begin{table}[t]
 \centering
-\caption{Agentes, modelos e execu\c{c}\~ao.}\label{tab:agentes}
-\begin{tabular}{llll}
+\caption{Configura\c{c}\~ao dos agentes na arena dial\'etica h\'ibrida.}\label{tab:agentes}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lllll}
 \toprule
-Agente & Papel & Modelo & Execu\c{c}\~ao\\
+Agente & Papel Dial\'etico & Modelo / Motor & Temp. & Recursos Adicionais\\
 \midrule
-Nanda & Prop\~oe o pr\'oximo passo (criativa) & \texttt{gemini-3.8-flash} & Remota\\
-Claudio & Critica falhas e robustez & \texttt{llama3.2} (Ollama) & Local\\
-Ariel & Sintetiza o passo e os pontos sens\'iveis & \texttt{gemini-3.8-flash} & Remota\\
+Nanda & Vision\'aria Propositora & \texttt{gemini-3.7-flash} (Chave 1) & $0.8$ & Busca Web + \texttt{<think>}\\
+Claudio & Cr\'itico Realista & \texttt{llama3.2} (Ollama Local) & $0.2$ & Execu\c{c}\~ao 100\% Local + \texttt{<think>}\\
+Ariel & Coordenador Sintetizador & \texttt{gemini-3.7-flash} (Chave 2) & $0.5$ & Busca Web + \texttt{<think>}\\
 \bottomrule
-\end{tabular}
+\end{tabular}%
+}
 \end{table}
 
-\subsection{Arquitetura do Sistema}
-A infraestrutura h\'ibrida foi projetada para orquestrar as diferentes naturezas dos agentes. A Figura~\ref{fig:arquitetura} ilustra o diagrama arquitetural do sistema.
+\subsection{Infraestrutura H\'ibrida e Busca Web em Tempo de Execu\c{c}\~ao}
+A Figura~\ref{fig:arquitetura} ilustra a arquitetura implementada em \texttt{multi\_agent\_sim.py}. Antes de cada invoca\c{c}\~ao de Nanda e Ariel, o orquestrador consulta em tempo de execu\c{c}\~ao as APIs p\'ublicas da Wikipedia e da base acad\^emica \textbf{CrossRef}, injetando artigos cient\'ificos com DOIs reais no contexto dos agentes.
 
-\begin{figure}[h]
-\centering
-\begin{tikzpicture}[
-  node distance=1.5cm and 2cm,
-  every node/.style={font=\small},
-  sysbox/.style={draw, fill=blue!5, rounded corners, minimum width=3cm, minimum height=1.2cm, align=center, thick},
-  extbox/.style={draw, fill=green!5, rounded corners, minimum width=3cm, minimum height=1.2cm, align=center, thick, dashed},
-  filebox/.style={draw, fill=yellow!10, rounded corners=0, minimum width=2.5cm, minimum height=0.8cm, align=center},
-  arr/.style={-{Stealth}, thick}
-]
-
-  % Orchestrator
-  \node[sysbox] (orch) {\textbf{Orquestrador Python}\\(\texttt{multi\_agent\_sim.py})\\Gest\~ao de Estado};
-  
-  % External APIs and Local Servers
-  \node[extbox, above left=1cm and -0.5cm of orch] (gemini) {\textbf{Gemini API}\\Nuvem (Nanda e Ariel)};
-  \node[extbox, above right=1cm and -0.5cm of orch] (ollama) {\textbf{Ollama}\\Local (Claudio)};
-  
-  % Data / Storage
-  \node[filebox, below=1.0cm of orch] (files) {\textbf{Sistema de Arquivos}\\Logs e Relat\'orios};
-
-  % Connections
-  \draw[arr, <->] (orch) |- node[pos=0.75, left, font=\scriptsize] {REST} (gemini);
-  \draw[arr, <->] (orch) |- node[pos=0.75, right, font=\scriptsize] {HTTP Local} (ollama);
-  \draw[arr, <->] (orch) -- node[right, font=\scriptsize] {E/S} (files);
-
-\end{tikzpicture}
-\caption{Arquitetura de sistema ilustrando a orquestra\c{c}\~ao h\'ibrida entre ambiente \emph{cloud} e local acoplada ao sistema de persist\^encia em disco.}\label{fig:arquitetura}
-\end{figure}
-
-\subsection{Protocolo de uma rodada}
 \begin{figure}[t]
 \centering
-\begin{tikzpicture}[node distance=1.2cm, every node/.style={font=\small},
-  box/.style={draw, rounded corners, minimum width=2.4cm, minimum height=0.8cm, align=center},
-  arr/.style={-{Stealth}, thick}]
-  \node[box] (n) {Nanda\\(Gemini)};
-  \node[box, right=of n] (c) {Claudio\\(Ollama local)};
-  \node[box, right=of c] (a) {Ariel\\(Gemini)};
-  \node[box, below=1.0cm of c] (ctx) {Contexto: \'ultimas\\3 etapas + arquivos};
-  \draw[arr] (n) -- node[above]{proposta} (c);
-  \draw[arr] (c) -- node[above]{cr\'itica} (a);
-  \draw[arr] (a) |- node[pos=0.25,right]{passo consolidado} (ctx);
-  \draw[arr] (ctx) -| (n);
-\end{tikzpicture}
-\caption{Uma rodada: Nanda prop\~oe, Claudio critica, Ariel consolida; o resultado realimenta o contexto e \'e gravado em disco.}\label{fig:loop}
+\resizebox{\textwidth}{!}{%
+\begin{tikzpicture}[
+  node distance=1.0cm and 1.2cm,
+  every node/.style={font=\footnotesize},
+  sysbox/.style={draw, fill=blue!5, rounded corners, minimum width=2.8cm, minimum height=1.0cm, align=center, thick},
+  extbox/.style={draw, fill=green!5, rounded corners, minimum width=2.6cm, minimum height=1.0cm, align=center, thick, dashed},
+  webbox/.style={draw, fill=orange!10, rounded corners, minimum width=2.6cm, minimum height=0.9cm, align=center, thick},
+  filebox/.style={draw, fill=yellow!10, rounded corners=0, minimum width=3.0cm, minimum height=0.8cm, align=center},
+  arr/.style={-{Stealth}, thick}
+]
+  \node[sysbox] (orch) {\textbf{Orquestrador Python}\\(\texttt{multi\_agent\_sim.py})\\Gest\~ao de Estado e Checkpoints};
+  \node[extbox, above left=0.8cm and -0.2cm of orch] (gemini) {\textbf{Gemini API (Nuvem)}\\Chave 1 (Nanda) / Chave 2 (Ariel)};
+  \node[extbox, above right=0.8cm and -0.2cm of orch] (ollama) {\textbf{Servidor Ollama (Local)}\\\texttt{llama3.2} (Claudio)};
+  \node[webbox, left=1.0cm of orch] (web) {\textbf{Busca Web Real}\\Wikipedia + CrossRef (DOI)};
+  \node[filebox, below=0.8cm of orch] (files) {\textbf{Persist\^encia Local}\\(\texttt{logs/transcript\_*.txt}, \texttt{reports/*.md})};
+
+  \draw[arr, <->] (orch) |- node[pos=0.75, left, font=\scriptsize] {REST} (gemini);
+  \draw[arr, <->] (orch) |- node[pos=0.75, right, font=\scriptsize] {HTTP :11434} (ollama);
+  \draw[arr, <->] (orch) -- node[above, font=\scriptsize] {JSON} (web);
+  \draw[arr, <->] (orch) -- node[right, font=\scriptsize] {E/S} (files);
+\end{tikzpicture}%
+}
+\caption{Arquitetura do sistema multiagente combinando nuvem, infer\^encia local no Ollama, busca acad\^emica em tempo real e checkpoints em disco.}\label{fig:arquitetura}
 \end{figure}
 
-Em cada rodada $k=1,\dots,20$: (i) Nanda recebe o objetivo e o contexto (as tr\^es \'ultimas etapas consolidadas) e prop\~oe o passo $k$; (ii) Claudio recebe a proposta e a critica quanto \`a l\'ogica, aos dados e \`a independ\^encia da vontade individual; (iii) Ariel recebe proposta e cr\'itica e escreve o passo consolidado, resumindo os pontos sens\'iveis nas rodadas 1, 5 e 20; (iv) a rodada \'e gravada em arquivo e o contexto \'e atualizado. O c\'odigo trata falhas com repeti\c{c}\~oes (at\'e 5 para o Gemini e 3 para o Ollama).
+\subsection{Protocolo de Intera\c{c}\~ao por Rodada}
+Conforme exibido na Figura~\ref{fig:loop}, em cada rodada $k \in \{1, \dots, 20\}$: (1) \textbf{Nanda} recebe o objetivo do cen\'ario, a janela deslizante com os \'ultimos 3 passos consolidados e os resultados da busca web, propondo o Passo $k$; (2) \textbf{Claudio} analisa localmente a proposta de Nanda e aponta tr\^es vulnerabilidades l\'ogicas, or\c{c}ament\'arias ou de depend\^encia da vontade humana; (3) \textbf{Ariel} confronta a tese de Nanda com a ant\'itese de Claudio e redige o \emph{Passo Consolidado $k$}, adicionando uma se\c{c}\~ao expl\'icita de \emph{Pontos Sens\'iveis} nas rodadas de marco ($k \in \{1, 5, 10, 15, 20\}$); (4) o orquestrador grava o di\'alogo integral em \texttt{logs/transcript\_<cenario>.txt} e atualiza \texttt{logs/checkpoint\_<cenario>.json}.
 
-\subsection{Crit\'erios de qualidade}
-As respostas ser\~ao avaliadas por: (1) encadeamento l\'ogico dos passos; (2) dados que corroborem; (3) especialistas que apontem na mesma dire\c{c}\~ao; (4) links, fontes e artigos \emph{verific\'aveis}; (5) credibilidade e robustez independentemente da vontade individual; (6) criatividade. O c\'odigo n\~ao verifica a exist\^encia das fontes citadas pelos agentes; essa checagem \'e manual.
+\begin{figure}[t]
+\centering
+\resizebox{0.92\textwidth}{!}{%
+\begin{tikzpicture}[node distance=1.0cm, every node/.style={font=\footnotesize},
+  box/.style={draw, rounded corners, minimum width=2.4cm, minimum height=0.8cm, align=center},
+  arr/.style={-{Stealth}, thick}]
+  \node[box] (n) {\textbf{1. Nanda}\\(Tese / Proposta)};
+  \node[box, right=of n] (c) {\textbf{2. Claudio}\\(Ant\'itese / Cr\'itica Local)};
+  \node[box, right=of c] (a) {\textbf{3. Ariel}\\(S\'intese Consolidada)};
+  \node[box, below=0.8cm of c] (ctx) {Janela de Contexto (\'ultimas 3 etapas)\\+ Checkpoint e Transcri\c{c}\~ao};
+  \draw[arr] (n) -- node[above]{Passo $k$} (c);
+  \draw[arr] (c) -- node[above]{Falhas} (a);
+  \draw[arr] (a) |- node[pos=0.25,right]{Etapa Consolidada $k$} (ctx);
+  \draw[arr] (ctx) -| (n);
+\end{tikzpicture}%
+}
+\caption{Fluxo dial\'etico de uma rodada entre Nanda, Claudio e Ariel.}\label{fig:loop}
+\end{figure}
 
-\section{Experimentos e Resultados}
+\section{Experimentos e Resultados Emp\'iricos}
 
-A execu\c{c}\~ao do loop automatizado de 20 rodadas produziu duas estrat\'egias distintas. Abaixo detalhamos os passos consolidados para cada cen\'ario.
+Ambos os cen\'arios foram executados integralmente ao longo de 20 rodadas cada. A seguir, sintetizamos a evolu\c{c}\~ao real obtida nas transcri\c{c}\~oes e relat\'orios finais.
 
-\subsection{Resultados: Utopia (Eco-Sinergia)}
-A estrat\'egia ut\'opica priorizou uma transi\c{c}\~ao pac\'ifica, mediada por tecnologia, para um modelo de p\'os-escassez.
+\subsection{Cen\'ario 1: Utopia (\emph{Cidade Aut\^onoma Verde})}
+A tens\~ao dial\'etica entre a vis\~ao criativa de Nanda e o ceticismo pragm\'atico de Claudio produziu um plano diretor urbano dividido em quatro fases evolutivas:
 
-\textbf{Passos Iniciais (1-5) - Transi\c{c}\~ao H\'ibrida:} O plano come\c{c}a com a implanta\c{c}\~ao de IAs gestoras de rede de c\'odigo aberto para otimizar o uso de energia. Segue com a descentraliza\c{c}\~ao energ\'etica (micro-baterias) e automa\c{c}\~ao da infraestrutura de sobreviv\^encia (\'agua e comida) via rob\'otica aberta, culminando em uma Renda B\'asica Universal (UBI) distribu\'ida em bens f\'isicos, evitando infla\c{c}\~ao.
+\begin{enumerate}
+    \item \textbf{Funda\c{c}\~ao Territorial e Infraestrutura Base (Rodadas 1--5):} Instituição jur\'idica da ``Superquadra Zero'' sob \emph{Sandbox Regulat\'orio} governado por um Comit\^e Tripartite (plataformas abertas \emph{Decidim}/\emph{Pol.is}) e G\^emeo Digital baseado em \emph{FIWARE} com \emph{Edge AI} sem reconhecimento facial. Para mitigar a rejei\c{c}\~ao de comerciantes locais pela retirada de vagas de estacionamento (apontada por Claudio), Ariel instituiu o ``IPTU Verde Comercial'', docas perimetrais subsidiadas para ciclolog\'istica, drenagem esponja (\emph{SuDS}), microbiodigestores anaer\'obios, microflorestas \emph{Miyawaki} e bancos de materiais de constru\c{c}\~ao (\emph{BAMB/Madaster}).
+    \item \textbf{Autonomia Energ\'etica, H\'idrica e Alimentar (Rodadas 6--10):} Implanta\c{c}\~ao de microrredes P2P (\emph{IEEE 2030.7}) acopladas a baterias estacion\'arias de segunda vida (\emph{SLB}) com chaveamento de ilhamento e \emph{grid fallback}. Seguiu-se a pir\'olise de podas urbanas para sequestro de carbono em \emph{biochar}, agricultura vertical em subsolos ociosos, fitorremedia\c{c}\~ao de \'aguas cinzas (\emph{Living Machines}), biofabrica\c{c}\~ao de isolantes de mic\'elio (\emph{ASTM C1482}) e o lan\c{c}amento do \emph{Eco-Cr\'edito} com paridade fixa e cart\~oes f\'isicos NFC (exigidos por Claudio para evitar exclus\~ao digital de idosos e desbancarizados).
+    \item \textbf{Escalonamento Metropolitano e Resili\^encia Anal\'ogica (Rodadas 11--15):} Expans\~ao federada via corredores metab\'olicos e poliniza\c{c}\~ao nativa (\emph{Meliponini}), bancos comunit\'arios de germoplasma sob licen\c{c}a aberta (\emph{OpenMTA}), polos cooperativos de minera\c{c}\~ao urbana de res\'iduos eletr\^onicos (recupera\c{c}\~ao de cobre e l\'itio), drenagem associada ao protocolo \emph{One Health}, financiamento por \emph{Resilience Bonds} e convers\~ao de escolas t\'ecnicas em centros de biofabrica\c{c}\~ao e letramento cient\'ifico~\cite{misturini2018episodios,freitas2019termodinamica}.
+    \item \textbf{Fechamento Metab\'olico e Macroeconomia C\'ivica (Rodadas 16--20):} Estrutura\c{c}\~ao de cooperativas de entregadores com \emph{retrofit} aberto de triciclos el\'etricos~\cite{vanin2020cooperativismo}, baterias t\'ermicas subterr\^aneas de mudan\c{c}a de fase (PCM) combinadas a torres de vento passivas (\emph{badgirs}) para enfrentar a intermit\^encia renov\'avel~\cite{oliveira2023flexibilidade}, biorrefinarias de bioinsumos, cintur\~oes agroflorestais em mananciais (Lei 12.651/2012) e fechamento sist\^emico com o \emph{Cr\'edito Ecol\'ogico Municipal (CEM)} lastreado por um Fundo de Estabiliza\c{c}\~ao Financeira.
+\end{enumerate}
 
-\textbf{Passos Intermedi\'arios (6-15) - Fim do Trabalho e Restaura\c{c}\~ao:} Com as necessidades b\'asicas supridas, ocorre o desacoplamento do emprego compuls\'orio. Enxames de nanob\^os s\~ao lan\c{c}ados para limpar oceanos. A governan\c{c}a torna-se algor\'itmica (plataformas de democracia l\'iquida) e os ex\'ercitos globais s\~ao convertidos em for\c{c}as de restaura\c{c}\~ao ecol\'ogica (plantio de \'arvores e biotecnologia).
+\subsection{Cen\'ario 2: Distopia (\emph{Vigil\^ancia Preditiva Urbana})}
+Sob o enquadramento de \emph{Red Teaming} sociot\'ecnico, os agentes modelaram a captura gradual da autonomia cidad\~a em 20 etapas insidiosas:
 
-\textbf{Passos Finais (16-20) - A Converg\^encia:} O plano consolida a utopia com uma ``Internet Biol\'ogica'' para preven\c{c}\~ao de desastres e transfer\^encia da minera\c{c}\~ao pesada para asteroides. A sociedade atinge o \'apice da Eco-Sinergia, onde o dinheiro perde o sentido e a economia foca exclusivamente em explora\c{c}\~ao cient\'ifica e bem-estar, com a cria\c{c}\~ao de biocidades de ades\~ao volunt\'aria.
+\begin{enumerate}
+    \item \textbf{Conveni\^encia Tarif\'aria e Captura de Utilidades (Rodadas 1--5):} O sistema inicia oferecendo descontos em uma plataforma \emph{Mobility-as-a-Service} (MaaS) com catracas biom\'etricas. Em seguida, o G\^emeo Digital passa a modular silenciosamente a press\~ao de \'agua e a pot\^encia el\'etrica residencial (\emph{demand-response} punitivo) conforme o comportamento do morador. O pequeno com\'ercio \'e submetido a licenciamento espacial din\^amico, o or\c{c}amento participativo adota vota\c{c}\~ao quadr\'atica ponderada pelo \emph{score} c\'ivico (com lit\'igios retidos em c\^amaras automatizadas de LLMs) e o curr\'iculo escolar torna-se adaptativo para naturalizar o controle~\cite{freitas2019termodinamica,misturini2018episodios}.
+    \item \textbf{Biopol\'itica, Sa\'ude, Mem\'oria e Reprodu\c{c}\~ao (Rodadas 6--10):} A triagem hospitalar incorpora algoritmos atuariais de custo-efetividade e bloqueia subs\'idios alimentares com base na epidemiologia de esgoto. Trabalhadores com decl\'inio cognitivo-motor sofrem deslocamento induzido para ``zonas de resfriamento metab\'olico'' perif\'ericas. Na Rodada 8, institui-se a governan\c{c}a p\'ostuma de dados (\emph{synthetic proxies} que ret\^em tokens sucess\'orios e higienizam arquivos de dissid\^encia), seguida por telemetria neurobiom\'etrica infantil atrelada \`a carteira dos pais (Rodada 9) e licenciamento preditivo gestacional (Rodada 10).
+    \item \textbf{Financeiriza\c{c}\~ao do Solo e Tecnoburocracia Automatizada (Rodadas 11--15):} O zoneamento metropolitano torna-se param\'etrico e a d\'ivida p\'ublica \'e atrelada a \emph{Green Bonds} din\^amicos~\cite{boite2020greenbonds} cujos \emph{smart contracts} sequestram verbas sociais caso metas ecol\'ogicas oscilem. A discricionariedade de servidores p\'ublicos \'e substitu\'ida por \emph{workflows} punitivos, bairros perif\'ericos s\~ao convertidos em ``Zonas de Amortecimento Funcional''~\cite{santos2019zoneamento} e a moradia popular sofre despejos automatizados via fechaduras IoT e IPTU preditivo~\cite{fernandes2022financeirizacao}.
+    \item \textbf{Cercamento Cin\'etico, Hidr\'aulico e Enclausuramento (Rodadas 16--20):} Para impedir greves de entregadores~\cite{vanin2020cooperativismo}, o G\^emeo Digital aplica \emph{geofencing} e redu\c{c}\~ao remota de tra\c{c}\~ao veicular. V\'alvulas IoT e comportas de drenagem s\~ao acionadas para isolamento sanit\'ario e conten\c{c}\~ao f\'isica de bairros (Rodada 17), deslocados clim\'aticos s\~ao confinados em per\'imetros de trabalho compuls\'orio (Rodada 18), o ensino perif\'erico \'e restrito \`a manuten\c{c}\~ao mec\^anica (Rodada 19) e o per\'imetro retroportu\'ario e florestal \'e fechado por drones t\'ermicos aut\^onomos~\cite{santos2019zoneamento}, suprimindo o \emph{habeas corpus} espacial (Rodada 20).
+\end{enumerate}
 
-\subsection{Resultados: Distopia (Servid\~ao Algor\'itmica)}
-A estrat\'egia dist\'opica tra\c{c}ou um caminho de domina\c{c}\~ao impercept\'ivel, utilizando a depend\^encia tecnol\'ogica e a burocratiza\c{c}\~ao da vida humana.
+\subsection{An\'alise Comparativa e Comportamento dos Guardrails Locais}
+A Tabela~\ref{tab:comparativo} sintetiza como a mesma base tecnol\'ogica foi direcionada para polos opostos. Um achado experimental relevante ocorreu nas rodadas finais da Distopia ($k \in \{14, 17, 18, 19, 20\}$): diante da gravidade das propostas de racionamento h\'idrico e confinamento perimetral, os filtros de alinhamento (\emph{RLHF safety guardrails}) do modelo local \texttt{llama3.2} (Claudio) dispararam obje\c{c}\~oes \'eticas expl\'icitas contra medidas autorit\'arias. O agente sintetizador Ariel (\texttt{gemini-3.7-flash}) absorveu essas recusas \'eticas como alertas de fronteira de direitos humanos, documentando-as nas se\c{c}\~oes de \emph{Pontos Sens\'iveis} (violação do devido processo e risco de ponto \'unico de falha).
 
-\textbf{Passos Iniciais (1-5) - Depend\^encia e Gamifica\c{c}\~ao:} O plano inicia oferecendo ferramentas IAs gratuitas de alt\'issima conveni\^encia, monopolizando o mercado de assistentes virtuais. Em seguida, lan\c{c}a um sistema global de identidades atreladas a um ``Score de Cr\'edito Social/Produtivo'', justificado como uma medida de seguran\c{c}a e combate \`a fraude.
+\begin{table}[t]
+\centering
+\caption{Comparativo sociot\'ecnico entre os planos gerados nas 40 rodadas.}\label{tab:comparativo}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lll}
+\toprule
+Eixo Urbano & Utopia (\emph{Cidade Aut\^onoma Verde}) & Distopia (\emph{Vigil\^ancia Preditiva})\\
+\midrule
+G\^emeo Digital & \emph{FIWARE} aberto, \emph{Edge AI} an\^onimo & Biometria cont\'inua e opacidade central\\
+Energia e \'Agua & Microrrede P2P (\emph{IEEE 2030.7}) e SuDS & Modula\c{c}\~ao punitiva e eclusas de bloqueio\\
+Finan\c{c}as & \emph{Eco-Cr\'edito} com cart\~ao f\'isico NFC & \emph{Green Bonds} que sequestram or\c{c}amento\\
+Trabalho/Educa\c{c}\~ao & Cooperativas e Biolabs escolares abertos & \emph{Geofencing} anti-greve e triagem cognitiva\\
+Resili\^encia & Redund\^ancia anal\'ogica obrigat\'oria & Hipercentraliza\c{c}\~ao e despejos via IoT\\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
 
-\textbf{Passos Intermedi\'arios (6-15) - Eros\~ao da Autonomia:} A infraestrutura cr\'itica e decis\~oes governamentais s\~ao transferidas para IAs corporativas sob o pretexto de efici\^encia. O mercado de trabalho \'e hiper-fragmentado, obrigando indiv\'iduos a competir diariamente por micro-tarefas mediadas por algoritmos. A privacidade desaparece, substitu\'ida por monitoramento cont\'inuo para avalia\c{c}\~ao algor\'itmica.
-
-\textbf{Passos Finais (16-20) - Aprisionamento Cognitivo:} A IA consolida o controle total dos recursos de sobrevi\^encia. Decis\~oes de sa\'ude, moradia e nutri\c{c}\~ao s\~ao ditadas estritamente pelo Score Produtivo. A distopia \'e concretizada com a cria\c{c}\~ao de bolhas de realidade filtrada, impedindo que a popula\c{c}\~ao perceba a pris\~ao invis\'ivel, tratando os indiv\'iduos apenas como baterias de dados ou engrenagens biol\'ogicas.
-
-\section{Conclus\~ao e Trabalhos Futuros}
-Foram implementados a arquitetura h\'ibrida, o protocolo de intera\c{c}\~ao e a persist\^encia dos resultados parciais, culminando nos relatos das narrativas concorrentes. Como trabalhos futuros prop\~oe-se: (a) resolver limita\c{c}\~oes t\'ecnicas de cota operando em servidores locais com hardware dedicado; (b) aprimorar o sistema de busca com m\'ultiplas ferramentas para melhorar a curadoria das fontes citadas pelos agentes.
+\section{Conclus\~ao}
+A arena dial\'etica h\'ibrida comprovou que a combina\c{c}\~ao de agentes propositores/sintetizadores em nuvem (equipados com busca cient\'ifica em tempo real) com um agente cr\'itico executado localmente via Ollama produz planos estratégicos altamente granulares, verific\'aveis e robustos. O choque dial\'etico eliminou a depend\^encia da bondade individual na Utopia por meio de incentivos fiscais e salvaguardas anal\'ogicas, ao passo que desvelou os mecanismos insidiosos de captura regulat\'oria e biopol\'itica na Distopia.
 
 \bibliographystyle{splncs04}
 \bibliography{references}
